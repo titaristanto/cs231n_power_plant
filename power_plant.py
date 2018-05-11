@@ -23,13 +23,7 @@ def get_data(filenames):
         csvreader = csv.reader(csvfile, delimiter=',', dialect=csv.excel_tab)
         for row in csvreader:
             csv_rows.append(row)
-    
-#     cols_of_interest = {
-#         ("PLPRMFL", 0),
-#         ("PLFUELCT", 1),
-#         ("Imagery Status", 2)
-#     }        
-#     
+   
     for col_idx, col_title in enumerate(csv_rows[1]):
         if "PLPRMFL" in col_title:
             abbr_idx = col_idx
@@ -37,13 +31,13 @@ def get_data(filenames):
             full_idx = col_idx
         if "Imagery Status" in col_title:
             imagery_idx = col_idx
-    
+
     dict_alabel_flabel = {}
     dict_flabel_id = {}
     dict_alabel_id = {}
     dict_id_flabel = {}
     flabel_id_count = 0
-    
+
     for row in csv_rows:
         if "YES" in row[imagery_idx]:
             if row[full_idx] not in dict_flabel_id:
