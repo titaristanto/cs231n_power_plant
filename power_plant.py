@@ -16,41 +16,71 @@ def parse_filenames(folder_name):
     return files
 
 def get_data(filenames):
+
+    # Read from CSV file, find abbreviated label (alabel) to full label (flabel) mapping
+    csv_rows = []
+    with open("PLANTS.csv", 'rbU') as csvfile:
+        csvreader = csv.reader(csvfile, delimiter=',', dialect=csv.excel_tab)
+        for row in csvreader:
+            csv_rows.append(row)
+    
+#     cols_of_interest = {
+#         ("PLPRMFL", 0),
+#         ("PLFUELCT", 1),
+#         ("Imagery Status", 2)
+#     }        
+#     
+    for col_idx, col_title in enumerate(csv_rows[1]):
+        if "PLPRMFL" in col_title:
+            abbr_idx = col_idx
+        if "PLFUELCT" in col_title:
+            full_idx = col_idx
+        if "Imagery Status" in col_title:
+            imagery_idx = col_idx
+    
+    dict_alabel_flabel = {}
+    dict_flabel_id = {}
+    dict_alabel_id = {}
+    dict_id_flabel = {}
+    flabel_id_count = 0
+    
+    for row in csv_rows:
+        if "YES" in row[imagery_idx]:
+            if row[full_idx] not in dict_flabel_id:
+                dict_flabel_id[row[full_idx]] = flabel_id_count
+                dict_id_flabel[flabel_id_count] = row[full_idx]
+                flabel_id_count += 1
+            if row[abbr_idx] not in dict_alabel_flabel:
+                dict_alabel_flabel[row[abbr_idx]] = row[full_idx]
+                dict_alabel_id[row[abbr_idx]] = dict_flabel_id[row[full_idx]]
+    print (dict_alabel_flabel)
+    print (dict_flabel_id)
+
     m = len(filenames)
     X = np.zeros((m, 75, 75, 3))
     Y = np.zeros((m))
-    dict_label_id = {}
-    dict_id_label = {}
-    label_int_count = 0
     dict_id_count = {}
-    dict_label_count = {}
+    dict_flabel_count = {}
 
     for i in range(m):
         img = Image.open(filenames[i])
         X[i] = np.array(img)[:75,:75,:3]
 
-        label = filenames[i].split('_')[-1][:-4]
-        if (label not in dict_label_id):
-            dict_label_id[label] = label_int_count
-            dict_id_label[label_int_count] = label
-            label_int_count += 1
-        Y[i] = int(dict_label_id[label])
+        alabel = filenames[i].split('_')[-1][:-4]
+        if (alabel not in dict_alabel_flabel):
+            print ("WARNING: unseen a-label found in filename.")
+        Y[i] = int(dict_alabel_id[alabel])
         if (Y[i] not in dict_id_count):
             dict_id_count[Y[i]] = 0
         dict_id_count[Y[i]] += 1
-        dict_label_count[dict_id_label[Y[i]]] = dict_id_count[Y[i]]
+        dict_flabel_count[dict_id_flabel[Y[i]]] = dict_id_count[Y[i]]
         
     print (X.shape)
-    print dict_label_id
-    print dict_id_count
-    print dict_label_count
-    print sorted(((v,k) for k,v in dict_label_count.iteritems()), reverse=True)
-    print np.histogram(Y)
+    print (dict_id_count)
+    print (dict_flabel_count)
+    print (sorted(((v,k) for k,v in dict_flabel_count.iteritems()), reverse=True))
+    print (np.histogram(Y))
     
-    # Convert labels
-#     with open("PLANTS.csv", 'rb') as csvfile:
-#         csvreader = csv.reader(csvfile, delimiter=' ', quotechar='|')
-
     return X, Y
 
 def plot_history(history):
