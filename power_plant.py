@@ -9,30 +9,49 @@ from keras.models import Sequential
 from keras.layers import Dense, Dropout, Activation, Flatten
 from keras.layers import Conv2D, MaxPooling2D
 
+import csv
+
 def parse_filenames(folder_name):
-    main_dir = os.chdir('C:\\Users\\E460\\Documents\\Stanford\\Courses\\Spring 17\\CS 231N\\Project')
-    files = glob.glob(os.path.join(main_dir, folder_name, '*.tif'))
+    files = glob.glob(os.path.join("./", folder_name, '*.tif'))
     return files
 
 def get_data(filenames):
     m = len(filenames)
-    arr_input_X = np.zeros((m, 75, 75, 3))
-    #arr_input_Y = np.zeros((m,1))
+    X = np.zeros((m, 75, 75, 3))
+    Y = np.zeros((m))
+    dict_label_id = {}
+    dict_id_label = {}
+    label_int_count = 0
+    dict_id_count = {}
+    dict_label_count = {}
 
     for i in range(m):
         img = Image.open(filenames[i])
-        arr_img = np.array(img)
-        if arr_img.shape[0] > 75:
-            arr_img = arr_img[:-1,:,:]
-        if arr_img.shape[1] > 75:
-            arr_img = arr_img[:,:-1,:]
+        X[i] = np.array(img)[:75,:75,:3]
 
-        arr_input_X[i] = arr_img
+        label = filenames[i].split('_')[-1][:-4]
+        if (label not in dict_label_id):
+            dict_label_id[label] = label_int_count
+            dict_id_label[label_int_count] = label
+            label_int_count += 1
+        Y[i] = int(dict_label_id[label])
+        if (Y[i] not in dict_id_count):
+            dict_id_count[Y[i]] = 0
+        dict_id_count[Y[i]] += 1
+        dict_label_count[dict_id_label[Y[i]]] = dict_id_count[Y[i]]
+        
+    print (X.shape)
+    print dict_label_id
+    print dict_id_count
+    print dict_label_count
+    print sorted(((v,k) for k,v in dict_label_count.iteritems()), reverse=True)
+    print np.histogram(Y)
+    
+    # Convert labels
+#     with open("PLANTS.csv", 'rb') as csvfile:
+#         csvreader = csv.reader(csvfile, delimiter=' ', quotechar='|')
 
-        #print (arr_input_X.shape)
-        #arr_input_Y[i,:] = arr['y']
-
-    return arr_input_X
+    return X, Y
 
 def plot_confusion_matrix(cm, classes,
                           normalize=False,
@@ -74,11 +93,7 @@ def plot_confusion_matrix(cm, classes,
     plt.savefig('Power Plant Classification Confusion Matrix.png')
     
 def main():
-    x_train = get_data(parse_filenames(folder_name='uspp_landsat'))
-    
-    
-    
-    
+    X_train, Y_train = get_data(parse_filenames(folder_name='uspp_landsat'))
     
     # Show confusion Matrix
     cnf_matrix = confusion_matrix(y_test, y_pred)
