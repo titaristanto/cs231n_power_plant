@@ -190,7 +190,7 @@ def main():
     encoder = LabelBinarizer()
     Y = encoder.fit_transform(Y_raw)
 
-    # Compute the output of last layer of training set using pretrained classifier (clf:Resnet50 - weights:imagenet)
+    # Compute the output of last layer using pre-trained classifier (clf:Resnet50 - weights:imagenet)
     resnet50_model = ResNet50(include_top=False, weights='imagenet', input_shape=(h, w, c))
     X_features = resnet50_model.predict(X)
     m_features, h_features, w_features, c_features = X_features.shape
