@@ -210,11 +210,13 @@ def main():
     # Run model
     model, history = run_model(x_train, y_train, x_dev, y_dev, epochs=50, batch_size=200)
 
-    # Make prediction on test set
-    y_test_pred = model.predict(x_test)
-
     # Plot train and val accuracy & loss
     plot_history(history)
+    
+    # Make prediction on test set
+    y_test_pred = model.predict(x_test)
+    pred_class = model.predict_classes(x_test)
+    label_class = np.argmax(y_test, axis=1)
     
     # Show confusion Matrix
     cnf_matrix = confusion_matrix(pred_class, label_class)
