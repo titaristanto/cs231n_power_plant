@@ -3,13 +3,15 @@ import numpy as np
 import os, glob, itertools
 import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix
-
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import LabelBinarizer
 import keras
+from keras.models import Model
 from keras.models import Sequential
-from keras.layers import Dense, Dropout, Activation, Flatten
-from keras.layers import Conv2D, MaxPooling2D
-
+from keras.layers import Input, Dense, Dropout, Activation, Flatten
+from keras.applications.resnet50 import ResNet50
 import csv
+import cv2 as cv
 
 def parse_filenames(folder_name):
     files = glob.glob(os.path.join("./", folder_name, '*.tif'))
@@ -76,6 +78,26 @@ def get_data(filenames):
     print (np.histogram(Y))
     
     return X, Y
+
+def resize_image(X, size):
+    X_new = np.zeros((X.shape[0], *size,3))
+    for i in range(X.shape[0]):
+        X_new[i, :, :, :] = cv.resize(X[i, :, :, :], size, interpolation=cv.INTER_LINEAR)
+    return X_new
+
+def run_model(x_train, y_train, x_dev, y_dev, epochs=50, batch_size=200):
+    model = Sequential()
+    model.add(Dense(activation='relu', input_dim=x_train.shape[1], output_dim=64))
+    model.add(Dropout(0.5))
+    model.add(Dense(output_dim=12, activation='softmax'))
+
+    model.compile(optimizer='adam',
+                  loss='categorical_crossentropy',
+                  metrics=['acc'])
+    history = model.fit(x_train, y_train,
+                        epochs=epochs, batch_size=batch_size,
+                        validation_data=(x_dev, y_dev))
+    return model, history
 
 def plot_history(history):
     '''
@@ -158,17 +180,46 @@ def plot_confusion_matrix(cm, classes,
     plt.savefig('Power Plant Classification Confusion Matrix.png')
     
 def main():
-    X_train, Y_train = get_data(parse_filenames(folder_name='uspp_landsat'))
-    
-    
-    
-    
-    
+    X_raw, Y_raw = get_data(parse_filenames(folder_name='uspp_landsat'))
+
+    # Resize images
+    X = resize_image(X_raw, size=(200, 200))
+    m, h, w, c = X.shape
+
+    # Convert labels into one-hot-encoding format
+    encoder = LabelBinarizer()
+    Y = encoder.fit_transform(Y_raw)
+
+    # Compute the output of last layer of training set using pretrained classifier (clf:Resnet50 - weights:imagenet)
+    resnet50_model = ResNet50(include_top=False, weights='imagenet', input_shape=(h, w, c))
+    X_features = resnet50_model.predict(X)
+    m_features, h_features, w_features, c_features = X_features.shape
+    X_features_reshaped = np.reshape(X_features,
+                                           (m_features, h_features*w_features*c_features))
+
+    # Split into train, dev, and test set
+    x_traindev, x_test, y_traindev, y_test = train_test_split(X_features_reshaped, Y,
+                                                              test_size=0.1,
+                                                              shuffle=True)
+    x_train, x_dev, y_train, y_dev = train_test_split(x_traindev, y_traindev,
+                                                              test_size=0.1,
+                                                              shuffle=True)
+
+
+
+    # Run model
+    model, history = run_model(x_train, y_train, x_dev, y_dev, epochs=50, batch_size=200)
+
+    # Make prediction on test set
+    y_test_pred = model.predict(x_test)
+
+    # Plot train and val accuracy & loss
+    plot_history(history)
     
     # Show confusion Matrix
-    cnf_matrix = confusion_matrix(y_test, y_pred)
-    class_names = list([,]) # list of all the labels
-    plot_confusion_matrix(cnf_matrix, classes=class_names, title='Confusion matrix')
+    #cnf_matrix = confusion_matrix(y_test, y_pred)
+    #class_names = list([,]) # list of all the labels
+    #plot_confusion_matrix(cnf_matrix, classes=class_names, title='Confusion matrix')
 
 if __name__ == '__main__':
     main()
