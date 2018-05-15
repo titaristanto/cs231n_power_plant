@@ -77,7 +77,7 @@ def get_data(filenames):
     print (sorted(((v,k) for k,v in dict_flabel_count.iteritems()), reverse=True))
     print (np.histogram(Y))
     
-    return X, Y
+    return X, Y, dict_id_flabel
 
 def resize_image(X, size):
     X_new = np.zeros((X.shape[0], *size,3))
@@ -180,7 +180,7 @@ def plot_confusion_matrix(cm, classes,
     plt.savefig('Power Plant Classification Confusion Matrix.png')
     
 def main():
-    X_raw, Y_raw = get_data(parse_filenames(folder_name='uspp_landsat'))
+    X_raw, Y_raw, dict_id_flabel = get_data(parse_filenames(folder_name='uspp_landsat'))
 
     # Resize images
     X = resize_image(X_raw, size=(200, 200))
@@ -217,9 +217,9 @@ def main():
     plot_history(history)
     
     # Show confusion Matrix
-    #cnf_matrix = confusion_matrix(y_test, y_pred)
-    #class_names = list([,]) # list of all the labels
-    #plot_confusion_matrix(cnf_matrix, classes=class_names, title='Confusion matrix')
+    cnf_matrix = confusion_matrix(pred_class, label_class)
+    class_names = list(list(dict_id_flabel.values())) # list of all the labels
+    plot_confusion_matrix(cnf_matrix, classes=class_names, title='Confusion matrix')
 
 if __name__ == '__main__':
     main()
