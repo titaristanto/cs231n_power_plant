@@ -87,9 +87,9 @@ def resize_image(X, size):
 
 def run_model(x_train, y_train, x_dev, y_dev, epochs=50, batch_size=200):
     model = Sequential()
-    model.add(Dense(activation='relu', input_dim=x_train.shape[1], output_dim=64))
+    model.add(Dense(activation='relu', input_dim=x_train.shape[1], output_dim=64)) # output_dim is the no of hidden layers
     model.add(Dropout(0.5))
-    model.add(Dense(output_dim=12, activation='softmax'))
+    model.add(Dense(output_dim=y_train.shape[1], activation='softmax'))
 
     model.compile(optimizer='adam',
                   loss='categorical_crossentropy',
