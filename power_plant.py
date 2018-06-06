@@ -21,7 +21,7 @@ def get_data(filenames):
 
     # Read from CSV file, find abbreviated label (alabel) to full label (flabel) mapping
     csv_rows = []
-    with open("PLANTS.csv", 'rbU') as csvfile:
+    with open("PLANTS.csv", 'rtU') as csvfile:
         csvreader = csv.reader(csvfile, delimiter=',', dialect=csv.excel_tab)
         for row in csvreader:
             csv_rows.append(row)
@@ -74,7 +74,7 @@ def get_data(filenames):
     print (X.shape)
     print (dict_id_count)
     print (dict_flabel_count)
-    print (sorted(((v,k) for k,v in dict_flabel_count.iteritems()), reverse=True))
+    print (sorted(((v,k) for k,v in dict_flabel_count.items()), reverse=True))
     print (np.histogram(Y))
     
     return X, Y, dict_id_flabel
