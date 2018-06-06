@@ -13,6 +13,13 @@ from keras.applications.resnet50 import ResNet50
 import csv
 import cv2 as cv
 
+def is_float(value):
+    try:
+        float(value)
+        return True
+    except ValueError:
+        return False
+
 def parse_filenames(folder_name):
     files = glob.glob(os.path.join("./", folder_name, '*.tif'))
     return files
@@ -27,21 +34,30 @@ def get_data(filenames):
             csv_rows.append(row)
    
     for col_idx, col_title in enumerate(csv_rows[1]):
+        if "SEQPLT14" in col_title:
+            id_idx = col_idx
         if "PLPRMFL" in col_title:
             abbr_idx = col_idx
         if "PLFUELCT" in col_title:
             full_idx = col_idx
         if "Imagery Status" in col_title:
             imagery_idx = col_idx
+        if "PLCO2EQA" in col_title:
+            co2e_idx = col_idx
+        if "PLNGENAN" in col_title:
+            netgen_idx = col_idx
 
     dict_alabel_flabel = {}
     dict_flabel_id = {}
     dict_alabel_id = {}
     dict_id_flabel = {}
+    dict_id_co2e = {}
+    dict_id_netgen = {}
     flabel_id_count = 0
 
     for row in csv_rows:
         if "YES" in row[imagery_idx]:
+            row_id = row[id_idx]
             if row[full_idx] not in dict_flabel_id:
                 dict_flabel_id[row[full_idx]] = flabel_id_count
                 dict_id_flabel[flabel_id_count] = row[full_idx]
@@ -49,18 +65,41 @@ def get_data(filenames):
             if row[abbr_idx] not in dict_alabel_flabel:
                 dict_alabel_flabel[row[abbr_idx]] = row[full_idx]
                 dict_alabel_id[row[abbr_idx]] = dict_flabel_id[row[full_idx]]
+            co2e = row[co2e_idx].replace(',','')
+            netgen = row[netgen_idx].replace(',','')
+            if is_float(co2e):
+                dict_id_co2e[row_id] = co2e
+            else:
+                dict_id_co2e[row_id] = float('NaN')
+            if is_float(netgen):
+                dict_id_netgen[row_id] = netgen
+            else:
+                dict_id_netgen[row_id] = float('NaN')
     print (dict_alabel_flabel)
     print (dict_flabel_id)
 
     m = len(filenames)
     X = np.zeros((m, 75, 75, 3))
     Y = np.zeros((m))
+    Y_co2e = np.zeros((m))
+    Y_netgen = np.zeros((m))
     dict_id_count = {}
     dict_flabel_count = {}
 
     for i in range(m):
         img = Image.open(filenames[i])
         X[i] = np.array(img)[:75,:75,:3]
+
+        row_id = filenames[i].split('_')[-3]
+        if (row_id not in dict_id_co2e):
+            Y_co2e[i] = float('NaN')
+        else:
+            Y_co2e[i] = float(dict_id_co2e[row_id])
+        if (row_id not in dict_id_netgen):
+            Y_netgen[i] = float('NaN')
+            print ("WARNING: missing netgen data")
+        else:
+            Y_netgen[i] = float(dict_id_netgen[row_id])
 
         alabel = filenames[i].split('_')[-1][:-4]
         if (alabel not in dict_alabel_flabel):
@@ -77,7 +116,7 @@ def get_data(filenames):
     print (sorted(((v,k) for k,v in dict_flabel_count.items()), reverse=True))
     print (np.histogram(Y))
     
-    return X, Y, dict_id_flabel
+    return X, Y, Y_co2e, Y_netgen, dict_id_flabel
 
 def resize_image(X, size):
     X_new = np.zeros((X.shape[0], *size,3))
@@ -178,9 +217,21 @@ def plot_confusion_matrix(cm, classes,
     plt.ylabel('True label')
     plt.xlabel('Predicted label')
     plt.savefig('Power Plant Classification Confusion Matrix.png')
-    
+
+def count_zero_percentage(arr):
+    tot_count = 0
+    zero_count = 0
+    for x in arr:
+        tot_count += 1
+        if x == 0:
+            zero_count += 1
+    return (float(zero_count) / float(tot_count))
+
 def main():
-    X_raw, Y_raw, dict_id_flabel = get_data(parse_filenames(folder_name='uspp_landsat'))
+    X_raw, Y_raw, Y_co2e, Y_netgen, dict_id_flabel = get_data(parse_filenames(folder_name='uspp_landsat'))
+
+    print ('Y_co2e', Y_co2e, count_zero_percentage(Y_co2e))
+    print ('Y_netgen', Y_netgen, count_zero_percentage(Y_netgen))
 
     # Resize images
     X = resize_image(X_raw, size=(200, 200))
